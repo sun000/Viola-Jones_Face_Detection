@@ -1,6 +1,11 @@
+#coding=utf-8
 import numpy as np
-from HaarLikeFeature import HaarLikeFeature
-from HaarLikeFeature import FeatureTypes
+from HaarLikeFeature import get_all_feature_extractor
+from HaarLikeFeature import get_features
+from utils import read_images
+from utils import poolContext
+from IntegralImage import to_integral_image
+from functools import partial
 
 class WeakClassifer(object):
     def __init__(self, inputs, labels, weights):
@@ -52,14 +57,26 @@ class AdaBoost(object):
         self.last_D = last_D
         self.threshold = 0.5
 
-    def train(self, p_img, n_img, learning_rate): # train_finish用于判断是否训练结束
+    def train(self, p_img, n_img): # train_finish用于判断是否训练结束
         while self.F > self.last_F * self.f:
-           self.add_weak_classifer(p_img, n_img) # 同时计算出对train_data的预测
-           self.decrease_threshold() # 降低threshold到符合要求
-           self.F, self.D = self.evaluate()
+            self.add_weak_classifer(p_img, n_img) # 同时计算出对train_data的预测
+            self.decrease_threshold() # 降低threshold到符合要求
+            self.F, self.D = self.evaluate()
 
     def add_weak_classifer(self, p_img, n_img):
-        pass
+        #print(len(p_img))
+        assert len(n_img) == 0 or p_img[0].shape == n_img[0].shape
+        feature_extractors = get_all_feature_extractor(p_img[0].shape)
+
+        # get all features
+        with poolContext(processes=4) as pool:
+            int_imgs = pool.map(to_integral_image, p_img)
+
+        with poolContext(processes=16) as pool:
+            features = pool.map(partial(get_features, int_imgs=int_imgs), feature_extractors)
+
+        print(features[0])
+
 
     def decrease_threshold(self):
         l, r = 0.0, self.threshold
@@ -85,3 +102,11 @@ class AdaBoost(object):
     def predict(self, img):
         pass
 
+def main():
+    adaBoost = AdaBoost(f=0.3, d=0.9, last_F=1.0, last_D=1.0)
+    p_img = read_images("data/test_data", normalize=True)
+    n_img = p_img
+    adaBoost.train(p_img, n_img)
+
+if __name__ == "__main__":
+    main()
