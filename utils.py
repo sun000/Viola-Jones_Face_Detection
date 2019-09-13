@@ -1,8 +1,11 @@
 #coding=utf-8
 import os
 import cv2
+import numpy as np
 import multiprocessing
 from contextlib import contextmanager
+
+EPS = 1e-7
 
 @contextmanager
 def poolContext(*args, **kwargs):
@@ -20,7 +23,10 @@ def read_images(image_dir, image_size=None, normalize=True):
         if image_size is not None:
             image = cv2.resize(image, image_size)
         if normalize is True:
-            cv2.normalize(image, image)
+            image = image.astype(float) - np.mean(image)
+            std = np.std(image)
+            if std != 0:
+                image /= std
         images.append(image)
     return images
 

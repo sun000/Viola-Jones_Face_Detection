@@ -1,6 +1,7 @@
 import IntegralImage as ii
 from enum import Enum
 from functools import partial
+import numpy as np
 
 class FeatureType(Enum):
     TWO_VERTICAL=(1, 2)
@@ -70,7 +71,7 @@ def get_all_feature_extractor(image_size):
 def get_features(features_extractor, int_imgs):# int_img array, cal all images' feature in one
     features = list(map(features_extractor.get_score, int_imgs))
     #print(len(features))
-    return features
+    return np.array(features)
 
 def main():
     pass
