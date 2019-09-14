@@ -1,27 +1,19 @@
 from AdaBoost import AdaBoost
+from context import Context
 import numpy as np
 from utils import EPS
-from utils import read_images
 
 class FaceRecognizer(object):
-    def __init__(self, F_target, f, d):
-        self.F_target = F_target
-        self.f, self.d = f, d
+    def __init__(self, ctx):
+        self.ctx = ctx
         self.adaBoost_models = []
 
-    def train(self, p_img, n_img, valid_p_img, valid_n_img):
-        F, D = 1.0, 1.0
-        while F > self.F_target:
-            adaBoost = AdaBoost(self.f, self.d, F, D)
-            adaBoost.train(p_img, n_img, valid_p_img, valid_n_img)
+    def train(self):
+        while self.ctx.F > self.ctx.F_target:
+            adaBoost = AdaBoost(self.ctx)
+            adaBoost.train()
             self.adaBoost_models.append(adaBoost)
-            F, D = adaBoost.F, adaBoost.D
-
-            valid_n_predict = adaBoost.predict(valid_n_img)
-            #n_img = 
-            #print(valid_n_predict.shape)
-            #print(type(valid_n_predict))
-            #print("it's end")
+            break
 
     def predict(self):
         pass
@@ -31,25 +23,10 @@ def FaceDecetive(object):
         pass
 
 def main():
-    #p_img = []
-    p_img = read_images("./data/colorferet/face_data", image_size=(24,24), normalize=True)[100:]
-    n_img = []
-    #valid_p_img = []
-    valid_p_img = p_img[:20]
-    p_img = p_img[20:]
-    valid_n_img = []
-    #for i in range(41):
-        #p_img.append(get_random_sample((24, 24)))
-    for i in range(53):
-        n_img.append(get_random_sample((24, 24)))
-    #for i in range(100):
-    #    valid_p_img.append(get_random_sample((24, 24)))
-    for i in range(50):
-        valid_n_img.append(get_random_sample((24, 24)))
-
-    faceRecognizer = FaceRecognizer(F_target=0.1, f=0.3, d=0.9)
-    faceRecognizer.train(p_img, n_img, valid_p_img, valid_n_img)
-
+    from context import get_debug_context
+    ctx = get_debug_context()
+    faceRecognizer = FaceRecognizer(ctx)
+    faceRecognizer.train()
 
 def get_random_sample(size):
     sample = np.random.normal(size=size)
