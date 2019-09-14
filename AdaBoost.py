@@ -15,9 +15,6 @@ class Weakclassifier(object):
         self.train_error = self.train(inputs, labels, weights)
 
     def train(self, inputs, labels, weights): # 训练
-        #print("It's Train WeakClassifier")
-        #print("inputs: ", inputs)
-        #print(labels)
         assert len(labels) == len(inputs)
         indexs = range(len(labels))
         indexs = sorted(indexs, key=lambda x: inputs[x])
@@ -30,10 +27,9 @@ class Weakclassifier(object):
                 n_weight_tot += weights[i]
 
         error = 1.0
-        #print("inputs ", inputs, "index", indexs)
         for i in range(len(indexs)):
             index = indexs[i]
-            #self.threshold = inputs[index] if i == len(indexs) - 1 else (inputs[indexs[i]] + inputs[indexs[i + 1]]) / 2.0
+
             if int(labels[index]) == 1:
                 p_weight_sum += weights[index]
             else:
@@ -47,7 +43,6 @@ class Weakclassifier(object):
                 self.threshold = inputs[index] if i == len(indexs) - 1 else (inputs[indexs[i]] + inputs[indexs[i + 1]]) / 2.0
                 error = n_weight_sum + (p_weight_tot - p_weight_sum)
                 self.parity = 1.0
-        #print("weakerror", error)
         return error
 
     def predict(self, feature):
@@ -90,13 +85,12 @@ class AdaBoost(object):
             self.valid_int_imgs = pool.map(to_integral_image, valid_p_img + valid_n_img)
 
         self.valid_features = [] # 验证集的特征根据选择的特征来计算，不用计算所有特征
-        #with poolContext(processes=16) as pool:
-        #    self.valid_features = pool.map(partial(get_features, int_imgs=valid_int_imgs), self.feature_extractors)
 
+        # 训练主要逻辑
         while self.F > self.last_F * self.f - EPS:
             self.add_weak_classifier() # 同时计算出对train_data的预测
             self.decrease_threshold() # 降低threshold到符合要求
-            self.last_F, self.last_D = self.F, self.D
+            #self.last_F, self.last_D = self.F, self.D
             self.F, self.D = self.evaluate()
             print("AdaBoost Size ", len(self.weakclassifiers), "F ", self.F, "D ", self.D, "last_F ", self.last_F, "last_D ", self.last_D)
 
@@ -143,30 +137,30 @@ class AdaBoost(object):
                 return
 
     def decrease_threshold(self):
+        self.threshold = 0.5
         l, r = 0.0, self.threshold
-        while r - l > 0.05: # 二分找到满足要求的最大threshold
+        while r - l > EPS: # 二分找到满足要求的最大threshold
             m = (l + r) / 2.0
-            _, D = self.evaluate(threshold=m)
+            self.threshold = m
+            F, D = self.evaluate()
+            #print("m ", m, "F ", F, "D ", D)
             if D > self.d * self.last_D:
                 l = m
             else:
                 r = m
-        self.threshold = (l + r) / 2.0
+        self.threshold = max((l + r) / 2.0 - EPS, 0.0)
+        self.F, self.D = self.evaluate()
 
-    def evaluate(self, threshold=None):
-        if threshold is None:
-            threshold = self.threshold
-
-        valid_predict = self.predit_from_feature(self.valid_features)
-        print("valid_predict ", valid_predict)
-        print("valid_labels ", self.valid_labels)
+    def evaluate(self):
+        valid_predict = self.predict_from_feature(self.valid_features)
         false_positive = (valid_predict + (1 - self.valid_labels) > 2.0 - EPS).astype(float).sum()
         true_positive = ((valid_predict + self.valid_labels) > 2.0 - EPS).astype(float).sum()
         F = false_positive / (1 - self.valid_labels).sum()
-        D = true_positive / valid_predict.sum()
+        D = true_positive / self.valid_labels.sum()
+        #print("threshold ", self.threshold, "true_positive ", true_positive, "all_positive ", self.valid_labels.sum())
         return F, D
 
-    def predit_from_feature(self, features):
+    def predict_from_feature(self, features):
         assert len(features) == len(self.weakclassifiers) and len(features) == len(self.alpha) and len(features) > 0
         predict_score = np.zeros(len(features[0]))
 
@@ -175,7 +169,8 @@ class AdaBoost(object):
             h = classifier.predict(feature)
             predict_score += h * alpha_now
             alpha_sum += alpha_now
-        predict_labels = (predict_score >= self.threshold * alpha_sum).astype(float)
+        #print(predict_score)
+        predict_labels = (predict_score >= self.threshold * alpha_sum - EPS).astype(float)
         return predict_labels
 
     def predict(self, img):
@@ -184,7 +179,7 @@ class AdaBoost(object):
         with poolContext(processes=16) as pool:
             test_features = pool.map(partial(get_features, int_imgs=test_int_imgs), self.used_features_extractor)
         #print("weakClassifer", len(self.weakclassifiers), "used_features ", test_features)
-        return self.predit_from_feature(test_features)
+        return self.predict_from_feature(test_features)
 
 
 def main():
