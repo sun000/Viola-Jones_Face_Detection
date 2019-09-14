@@ -13,7 +13,7 @@ def poolContext(*args, **kwargs):
     yield pool
     pool.terminate()
 
-def read_images(image_dir, image_size=None, normalize=True):
+def read_images(image_dir, image_size=None, normalize=True, limit=-1):
     file_names = os.listdir(image_dir)
     images = []
     for file_name in file_names:
@@ -28,6 +28,8 @@ def read_images(image_dir, image_size=None, normalize=True):
             if std != 0:
                 image /= std
         images.append(image)
+        if len(images) == limit:
+            break
     return images
 
 def main():
