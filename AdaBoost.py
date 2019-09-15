@@ -71,7 +71,9 @@ class AdaBoost(object):
             self.add_weak_classifier() # 同时计算出对train_data的预测
             self.decrease_threshold() # 降低threshold到符合要求
             self.ctx.F, self.ctx.D = self.evaluate()
-            print("AdaBoost Size ", len(self.weakclassifiers), "F ", self.ctx.F, "D ", self.ctx.D, "last_F ", self.last_F, "last_D ", self.last_D, "threshold ", self.threshold)
+            self.ctx.valid_predict = self.predict_from_feature(self.used_valid_features)
+            print("AdaBoost Size ", len(self.weakclassifiers), "F ", self.ctx.F, "D ",
+                  self.ctx.D, "last_F ", self.last_F, "last_D ", self.last_D, "threshold ", self.threshold)
         print()
 
 
@@ -102,7 +104,7 @@ class AdaBoost(object):
                 e = np.abs(train_ouput - self.train_labels)
                 self.weights *= beta ** (1.0 - e)
                 self.alpha.append(np.log(1.0 / (beta + EPS)))
-                return 
+                return
                 #print("feature ", self.train_features[idx])
                 print("threshold ", candidate_classifier[idx].threshold)
                 print("parity ", candidate_classifier[idx].parity)
@@ -127,12 +129,13 @@ class AdaBoost(object):
         self.threshold = max((l + r) / 2.0 - EPS, 0.0)
         #self.ctx.F, self.ctx.D = self.evaluate()
 
-    def evaluate(self): # 应该评估整个级联模型，不只是其中的一个Adaboost
+    def evaluate(self): # 应该评估整个级联模型，不只是其中的一个Adaboost,但是这里不能调用上层的函数，所以比较trick的方法是每增加一个级联模型的节点,就删除之前的节点判断的false样本，但是计算fp和dr的时候，正样本使用最初的原始样本大小作为分母
         valid_predict = self.predict_from_feature(self.used_valid_features)
+
         false_positive = (valid_predict + (1 - self.valid_labels) > 2.0 - EPS).astype(float).sum()
         true_positive = ((valid_predict + self.valid_labels) > 2.0 - EPS).astype(float).sum()
-        F = false_positive / (1 - self.valid_labels).sum()
-        D = true_positive / self.valid_labels.sum()
+        F = false_positive / self.ctx.valid_n_num
+        D = true_positive / self.ctx.valid_p_num
         #print("threshold ", self.threshold, "true_positive ", true_positive, "false_positive", false_positive, "all_positive ", self.valid_labels.sum())
         return F, D
 
@@ -151,9 +154,6 @@ class AdaBoost(object):
         return predict_labels
 
     def predict(self, img):
-        test_features = self.ctx.get_features_from_images(img)
-        used_features = []
-        for idx in self.used_features_idx:
-            used_features.append(test_features[idx])
-        return self.predict_from_feature(used_features)
+        test_features = self.ctx.get_features_from_images(img, self.used_features_extractors)
+        return self.predict_from_feature(test_features)
 
