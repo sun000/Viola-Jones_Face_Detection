@@ -29,7 +29,7 @@ class Context(object):
         self.features_extractors = get_all_feature_extractor(image_size)
         print("Extract features......")
         self.extract_features()
-        print("Finish extecting features!")
+        print("Finish extracting features!")
 
     def load_data(self, train_p_data_dir, train_n_data_dir, valid_p_data_dir, valid_n_data_dir):
         self.train_p_data = read_images(train_p_data_dir, self.image_size, normalize=True, limit=-1)
