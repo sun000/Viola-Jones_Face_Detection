@@ -1,3 +1,4 @@
+#coding=utf-8
 from utils import read_images
 from utils import poolContext
 from HaarLikeFeature import get_features
@@ -14,8 +15,6 @@ class Context(object):
                  F_target,
                  train_p_data_dir,
                  train_n_data_dir,
-                 valid_p_data_dir,
-                 valid_n_data_dir,
                  image_size=(24, 24)):
         self.f, self.d = f, d
         self.F, self.D = 1.0, 1.0
@@ -24,25 +23,30 @@ class Context(object):
 
         # 加载数据并提取特征
         print("Load data......")
-        self.load_data(train_p_data_dir, train_n_data_dir, valid_p_data_dir, valid_n_data_dir)
+        self.load_data(train_p_data_dir, train_n_data_dir)
         self.valid_predict = []
         self.features_extractors = get_all_feature_extractor(image_size)
         print("Extract features......")
         self.extract_features()
         print("Finish extracting features!")
 
-    def load_data(self, train_p_data_dir, train_n_data_dir, valid_p_data_dir, valid_n_data_dir):
+    def load_data(self, train_p_data_dir, train_n_data_dir):
         self.train_p_data = read_images(train_p_data_dir, self.image_size, normalize=True, limit=-1)
         self.train_n_data = read_images(train_n_data_dir, self.image_size, normalize=True, limit=-1)
-        self.valid_p_data = read_images(valid_p_data_dir, self.image_size, normalize=True, limit=70)
-        self.valid_n_data = read_images(valid_n_data_dir, self.image_size, normalize=True, limit=70)
+        split_p = int(len(self.train_p_data) * 0.7)
+        split_n = int(len(self.train_n_data) * 0.7)
+        self.valid_p_data = self.train_p_data[split_p:]
+        self.train_p_data = self.train_p_data[:split_p]
+        self.valid_n_data = self.train_n_data[split_n:]
+        self.train_n_data = self.train_n_data[:split_n]
         self.valid_p_num, self.valid_n_num = len(self.valid_p_data), len(self.valid_n_data)
 
-    def get_features_from_images(self, images, features_extractors=None):
+    def get_features_from_images(self, images, features_extractors=None, int_images=None):
         if features_extractors is None:
             features_extractors = self.features_extractors
-        with poolContext(processes=16) as pool:
-            int_images = pool.map(to_integral_image, images)
+        if int_images is None:
+            with poolContext(processes=16) as pool:
+                int_images = pool.map(to_integral_image, images)
         with poolContext(processes=16) as pool:
             features = pool.map(partial(get_features, int_imgs=int_images), features_extractors)
         return features
@@ -86,11 +90,9 @@ class Context(object):
 def get_debug_context():
     ctx = Context(0.3, 0.9, 0.1,
                   "./data/debug/train_p/",
-                  "./data/debug/train_n/",
-                  "./data/debug/valid_p/",
-                  "./data/debug/valid_n/")
-    ctx.get_train_data()
-    ctx.get_valid_data()
+                  "./data/debug/train_n/")
+    #ctx.get_train_data()
+    #ctx.get_valid_data()
     return ctx
 
 def main():
