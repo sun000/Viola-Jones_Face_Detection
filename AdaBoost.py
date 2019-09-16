@@ -1,8 +1,5 @@
 #coding=utf-8
 import numpy as np
-#from HaarLikeFeature import get_all_feature_extractor
-#from HaarLikeFeature import get_features
-#from utils import read_images
 from utils import poolContext
 from utils import EPS
 from functools import partial

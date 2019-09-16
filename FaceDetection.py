@@ -1,3 +1,4 @@
+#coding=utf-8
 from AdaBoost import AdaBoost
 from context import Context
 import numpy as np
@@ -34,7 +35,7 @@ class FaceRecognizer(object):
             while(len(predict_labels)) < idx:
                 predict_labels.append(0)
             predict_labels.append(1)
-        return predict_labels[:-1]
+        return np.array(predict_labels[:-1])
 
 def FaceDecetive(object):
     def __init__(self):
@@ -48,11 +49,13 @@ def main():
     test_data = []
     for i in range(100):
         test_data.append(get_random_sample((24, 24)))
-    print(faceRecognizer.predict(test_data))
+    test_predict = faceRecognizer.predict(test_data)
+    print(test_predict)
+    print(test_predict.sum())
     #print(faceRecognizer.predict(ctx.train_p_data + ctx.train_n_data))
 
 def get_random_sample(size):
-    sample = np.random.normal(size=size)
+    sample = np.random.randint(0, 255, size=size).astype(float)
     sample -= np.mean(sample)
     std = np.std(sample)
     if std > EPS or std < -EPS:
