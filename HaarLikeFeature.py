@@ -25,47 +25,49 @@ class HaarLikeFeature(object):
         #print(self.feature_type)
         #return 0.0
         score = 0.0
+        unit_w, unit_h = self.size[0] // self.feature_type.value[0], self.size[1] // self.feature_type.value[1]
         if self.feature_type == FeatureType.TWO_VERTICAL:
-            left = ii.sum_region(int_img, self.position, (self.size[0], self.size[1] // 2))
-            right = ii.sum_region(int_img, (self.position[0], self.position[1] + self.size[1] // 2), (self.size[0], self.size[1] - self.size[1] // 2))
+            left = ii.sum_region(int_img, self.position, (unit_w, unit_h))
+            right = ii.sum_region(int_img, (self.position[0], self.position[1] + unit_h), (unit_w, unit_h))
             score = left - right
         elif self.feature_type == FeatureType.TWO_HORIZONTAL:
-            top = ii.sum_region(int_img, self.position, (self.size[0] // 2, self.size[1]))
-            bottom = ii.sum_region(int_img, (self.position[0] + self.size[0] // 2, self.position[1]), (self.size[0] - self.size[0] // 2, self.size[1]))
+            top = ii.sum_region(int_img, self.position, (unit_w, unit_h))
+            bottom = ii.sum_region(int_img, (self.position[0] + unit_w, self.position[1]), (unit_w, unit_h))
             score = top - bottom
         elif self.feature_type == FeatureType.THREE_VERTICAL:
-            left = ii.sum_region(int_img, self.position, (self.size[0], self.size[1] // 3))
-            mid = ii.sum_region(int_img, (self.position[0], self.position[1] + self.size[1] // 3), (self.size[0], self.size[1] // 3))
-            right = ii.sum_region(int_img, (self.position[0], self.position[1] + self.size[1] // 3 * 2), (self.size[0], self.size[1] - self.size[1] // 3 * 2))
-            score = mid - left - right
+            left = ii.sum_region(int_img, self.position, (unit_w, unit_h))
+            mid = ii.sum_region(int_img, (self.position[0], self.position[1] + unit_h), (unit_w, unit_h))
+            right = ii.sum_region(int_img, (self.position[0], self.position[1] + unit_h * 2), (unit_w, unit_h))
+            score = 2 * mid - left - right
         elif self.feature_type == FeatureType.THREE_HORIZONTAL:
-            top = ii.sum_region(int_img, self.position, (self.size[0] // 3, self.size[1]))
-            mid = ii.sum_region(int_img, (self.position[0] + self.size[0] // 3, self.position[1]), (self.size[0] // 3, self.size[1]))
-            bottom = ii.sum_region(int_img, (self.position[0] + self.size[0] // 3 * 2, self.position[1]), (self.size[0] - self.size[0] // 3 * 2, self.size[1]))
-            score = mid - top - bottom
+            top = ii.sum_region(int_img, self.position, (unit_w, unit_h))
+            mid = ii.sum_region(int_img, (self.position[0] + unit_w, self.position[1]), (unit_w, unit_h))
+            bottom = ii.sum_region(int_img, (self.position[0] + unit_w * 2, self.position[1]), (unit_w, unit_h))
+            score = 2 * mid - top - bottom
         elif self.feature_type == FeatureType.FOUR:
-            left_top = ii.sum_region(int_img, self.position, (self.size[0] // 2, self.size[1] // 2))
-            left_botton = ii.sum_region(int_img, (self.position[0] + self.size[0] // 2 , self.position[1]), (self.size[0] - self.size[0] // 2, self.size[1] // 2))
-            right_top= ii.sum_region(int_img, (self.position[0], self.position[1] + self.size[1] // 2), (self.size[0], self.size[1] - self.size[1] // 2))
-            right_bottom = ii.sum_region(int_img, (self.position[0] + self.size[0] // 2 , self.position[1] + self.size[1] // 2), (self.size[0] - self.size[0] // 2, self.size[1] - self.size[1] // 2))
+            left_top = ii.sum_region(int_img, self.position, (unit_w, unit_h))
+            left_botton = ii.sum_region(int_img, (self.position[0] + unit_w , self.position[1]), (unit_w, unit_h))
+            right_top= ii.sum_region(int_img, (self.position[0], self.position[1] + unit_h), (unit_w, unit_h))
+            right_bottom = ii.sum_region(int_img, (self.position[0] + unit_w, self.position[1] + unit_h), (unit_w, unit_h))
             score = right_top + left_botton - left_top - right_bottom
 
         return score
 
+#cnt = {}
+
 def get_all_feature_extractor(image_size):
     (img_w, img_h) = image_size
     features_extractor = []
-    for x in range(img_w):
-        for y in range(img_h):
-            w = 1
-            while w + x < img_w:
-                h = 1
-                while h + y < img_h:
-                    for feature_type in FeatureTypes:
-                        if w >= feature_type.value[0] and h >= feature_type.value[1]:
-                            features_extractor.append(HaarLikeFeature(feature_type, position=(x, y), size=(w, h)))
-                    h += 1
-                w += 1
+    for feature_type in FeatureTypes:
+        for x in range(img_w):
+            for y in range(img_h):
+                (w, h) = feature_type.value
+                while w + x < img_w:
+                    while h + y < img_h:
+                        features_extractor.append(HaarLikeFeature(feature_type, position = (x, y), size = (w, h)))
+                        h += feature_type.value[1]
+                    w += feature_type.value[0]
+
     return features_extractor
 
 def get_features(features_extractor, int_imgs):# int_img array, cal all images' feature in one
@@ -74,7 +76,10 @@ def get_features(features_extractor, int_imgs):# int_img array, cal all images' 
     return np.array(features)
 
 def main():
-    pass
+    res = get_all_feature_extractor((24, 24))
+    #for (k, v) in cnt.items():
+    #    print(k , v)
+    print(len(res))
 
 if __name__ == "__main__":
     main()

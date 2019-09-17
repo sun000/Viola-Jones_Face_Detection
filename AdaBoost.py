@@ -55,13 +55,15 @@ class AdaBoost(object):
         self.used_features_idx = []
         self.used_features_idx_flag = [0] * len(self.ctx.features_extractors)
         self.used_features_extractors = []
+        self.used_valid_features = [] # 验证时不用所有feature所以只加入选中的features
+        self.used_train_features = [] # 用于最后更新，train集合
+
 
     def train(self): # train_finish用于判断是否训练结束
         self.train_features, self.train_labels = self.ctx.get_train_data()
         self.valid_features, self.valid_labels = self.ctx.get_valid_data()
-        self.used_valid_features = [] # 验证时不用所有feature所以只加入选中的features
 
-        self.weights = np.array([1 / (2 * len(self.ctx.train_n_data))] * len(self.ctx.train_p_data) + [1 / (2 * len(self.ctx.train_p_data))] * len(self.ctx.train_n_data))
+        self.weights = np.array([1 / ((2 * len(self.ctx.train_n_features[0])) + EPS)] * len(self.ctx.train_p_features[0]) + [1 / ((2 * len(self.ctx.train_p_features[0]))+EPS) ] * len(self.ctx.train_n_features[0]))
 
         # 训练主要逻辑
         while self.ctx.F > self.last_F * self.ctx.f - EPS:
@@ -69,6 +71,7 @@ class AdaBoost(object):
             self.decrease_threshold() # 降低threshold到符合要求
             self.ctx.F, self.ctx.D = self.evaluate()
             self.ctx.valid_predict = self.predict_from_feature(self.used_valid_features)
+            self.ctx.train_predict = self.predict_from_feature(self.used_train_features)
             print("AdaBoost Size ", len(self.weakclassifiers), "F ", self.ctx.F, "D ",
                   self.ctx.D, "last_F ", self.last_F, "last_D ", self.last_D, "threshold ", self.threshold)
         print()
@@ -93,10 +96,11 @@ class AdaBoost(object):
 
                 self.used_features_extractors.append(self.ctx.features_extractors[idx])
                 self.used_valid_features.append(self.valid_features[idx])
+                self.used_train_features.append(self.train_features[idx])
                 self.weakclassifiers.append(candidate_classifier[idx])
 
                 error = candidate_classifier[idx].train_error
-                beta = error / (1.0 - error)
+                beta = error / (1.0 - error + EPS)
                 train_ouput = candidate_classifier[idx].predict(self.train_features[idx])
                 e = np.abs(train_ouput - self.train_labels)
                 self.weights *= beta ** (1.0 - e)
@@ -129,7 +133,7 @@ class AdaBoost(object):
     def evaluate(self): # 应该评估整个级联模型，不只是其中的一个Adaboost,但是这里不能调用上层的函数，所以比较trick的方法是每增加一个级联模型的节点,就删除之前的节点判断的false样本，但是计算fp和dr的时候，正样本使用最初的原始样本大小作为分母
         valid_predict = self.predict_from_feature(self.used_valid_features)
 
-        false_positive = (valid_predict + (1 - self.valid_labels) > 2.0 - EPS).astype(float).sum()
+        false_positive = (valid_predict + (1.0 - self.valid_labels) > 2.0 - EPS).astype(float).sum()
         true_positive = ((valid_predict + self.valid_labels) > 2.0 - EPS).astype(float).sum()
         F = false_positive / self.ctx.valid_n_num
         D = true_positive / self.ctx.valid_p_num
