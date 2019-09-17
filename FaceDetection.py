@@ -3,6 +3,7 @@ from AdaBoost import AdaBoost
 from context import Context
 import numpy as np
 from utils import EPS
+import time
 
 class FaceRecognizer(object):
     def __init__(self, ctx):
@@ -15,7 +16,7 @@ class FaceRecognizer(object):
             adaBoost.train()
             self.adaBoost_models.append(adaBoost)
             #print(self.ctx.valid_predict)
-            self.ctx.update_valid_features()
+            self.ctx.update_features()
             #print(len(self.ctx.valid_p_features[0]))
             #print(len(self.ctx.valid_n_features[0]))
 
@@ -43,16 +44,27 @@ def FaceDecetive(object):
 
 def main():
     from context import get_debug_context
+    start_time = time.time()
     ctx = get_debug_context()
     faceRecognizer = FaceRecognizer(ctx)
+    ctx_end_time = time.time()
+    print("Training start......")
     faceRecognizer.train()
-    test_data = []
-    for i in range(100):
-        test_data.append(get_random_sample((24, 24)))
+    train_end_time = time.time()
+    print("Training end!!!")
+    print("Testing......")
+    test_data, test_labels = ctx.get_test_data()
     test_predict = faceRecognizer.predict(test_data)
-    print(test_predict)
-    print(test_predict.sum())
-    #print(faceRecognizer.predict(ctx.train_p_data + ctx.train_n_data))
+
+    false_poeitive = (test_predict + (1.0 - test_labels) > 2.0 - EPS).astype(float).sum()
+    true_positive = ((test_predict + test_labels) > 2.0 - EPS).astype(float).sum()
+    F = false_poeitive / len(ctx.test_n_data)
+    D = true_positive / len(ctx.test_p_data)
+    test_end_time = time.time()
+    print("F ", F, "D", D)
+    print("build context time: %s s" % (ctx_end_time - start_time))
+    print("training time: %s s" % (train_end_time - ctx_end_time))
+    print("testing time: %s s" % (test_end_time - train_end_time))
 
 def get_random_sample(size):
     sample = np.random.randint(0, 255, size=size).astype(float)

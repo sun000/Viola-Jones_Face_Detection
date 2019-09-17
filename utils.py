@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import multiprocessing
 from contextlib import contextmanager
+import random
 
 EPS = 1e-7
 
@@ -15,6 +16,7 @@ def poolContext(*args, **kwargs):
 
 def read_images(image_dir, image_size=None, normalize=True, limit=-1):
     file_names = os.listdir(image_dir)
+    random.shuffle(file_names)
     images = []
     for file_name in file_names:
         file_path = image_dir + "/" + file_name
